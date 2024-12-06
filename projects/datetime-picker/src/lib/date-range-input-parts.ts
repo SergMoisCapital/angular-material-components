@@ -27,13 +27,88 @@ import {
   ErrorStateMatcher,
   MAT_DATE_FORMATS,
   MatDateFormats,
-  mixinErrorState
 } from '@angular/material/core';
 import { _computeAriaAccessibleName } from './aria-accessible-name';
 import { NgxMatDateAdapter } from './core/date-adapter';
 import { NGX_MAT_DATE_FORMATS, NgxMatDateFormats } from './core/date-formats';
 import { NgxDateRange, NgxDateSelectionModelChange } from './date-selection-model';
 import { NgxDateFilterFn, NgxMatDatepickerInputBase } from './datepicker-input-base';
+
+
+export class _ErrorStateTracker {
+  /** Whether the tracker is currently in an error state. */
+  private errorState = false;
+
+  /** User-defined matcher for the error state. */
+  private matcher;
+
+  constructor(
+    private _defaultMatcher,
+    private ngControl,
+    private _parentFormGroup,
+    private _parentForm,
+    private _stateChanges
+  ) {}
+
+  /** Updates the error state based on the provided error state matcher. */
+  updateErrorState() {
+    const oldState = this.errorState;
+    const parent = this._parentFormGroup || this._parentForm;
+    const matcher = this.matcher || this._defaultMatcher;
+    const control = this.ngControl ? this.ngControl.control : null;
+    const newState = matcher?.isErrorState(control, parent) ?? false;
+
+    if (newState !== oldState) {
+      this.errorState = newState;
+      this._stateChanges.next();
+    }
+  }
+}
+
+export function mixinErrorState(base) {
+  return class extends base {
+    private _tracker;
+
+    /** Whether the component is in an error state. */
+    get errorState() {
+      return this._getTracker().errorState;
+    }
+    set errorState(value) {
+      this._getTracker().errorState = value;
+    }
+
+    /** An object used to control the error state of the component. */
+    get errorStateMatcher() {
+      return this._getTracker().matcher;
+    }
+    set errorStateMatcher(value) {
+      this._getTracker().matcher = value;
+    }
+
+    /** Updates the error state based on the provided error state matcher. */
+    updateErrorState() {
+      this._getTracker().updateErrorState();
+    }
+
+    _getTracker() {
+      if (!this._tracker) {
+        this._tracker = new _ErrorStateTracker(
+          this._defaultErrorStateMatcher,
+          this.ngControl,
+          this._parentFormGroup,
+          this._parentForm,
+          this.stateChanges
+        );
+      }
+
+      return this._tracker;
+    }
+
+    constructor(...args) {
+      super(...args);
+    }
+  };
+}
 
 /** Parent component that should be wrapped around `MatStartDate` and `MatEndDate`. */
 export interface NgxMatDateRangeInputParent<D> {
