@@ -46,7 +46,7 @@ import {
   ViewEncapsulation,
   inject,
 } from '@angular/core';
-import { CanColor, ThemePalette, mixinColor } from '@angular/material/core';
+import { ThemePalette, CanColor } from '@angular/material/core';
 import { Observable, Subject, Subscription, merge } from 'rxjs';
 import { filter, take } from 'rxjs/operators';
 import { NgxMatCalendar, NgxMatCalendarView } from './calendar';
@@ -92,6 +92,41 @@ export const NGX_MAT_DATEPICKER_SCROLL_STRATEGY_FACTORY_PROVIDER = {
   deps: [Overlay],
   useFactory: NGX_MAT_DATEPICKER_SCROLL_STRATEGY_FACTORY,
 };
+
+export function mixinColor(
+  base,
+  defaultColor?,
+) {
+  return class extends base {
+    _color;
+    defaultColor = defaultColor;
+
+    get color() {
+      return this._color;
+    }
+    set color(value) {
+      const colorPalette = value || this.defaultColor;
+
+      if (colorPalette !== this._color) {
+        if (this._color) {
+          this._elementRef.nativeElement.classList.remove(`mat-${this._color}`);
+        }
+        if (colorPalette) {
+          this._elementRef.nativeElement.classList.add(`mat-${colorPalette}`);
+        }
+
+        this._color = colorPalette;
+      }
+    }
+
+    constructor(...args) {
+      super(...args);
+
+      // Set the default color that can be specified from the mixin.
+      this.color = defaultColor;
+    }
+  };
+}
 
 // Boilerplate for applying mixins to MatDatepickerContent.
 /** @docs-private */
